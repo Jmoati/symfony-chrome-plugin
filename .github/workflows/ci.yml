@@ -35,11 +35,22 @@ jobs:
       - name: End-to-end test
         run: ./scripts/e2e.sh "${{ steps.package.outputs.zip }}"
 
+      - name: Install Firefox
+        run: npx --yes @puppeteer/browsers@3.2.3 install firefox@stable --path "$HOME/.cache/puppeteer"
+
+      - name: End-to-end test in Firefox
+        run: ./scripts/e2e-firefox.sh "${{ steps.package.outputs.zip }}"
+
+      - name: Lint for addons.mozilla.org
+        run: |
+          mkdir -p "$RUNNER_TEMP/ext" && unzip -q "${{ steps.package.outputs.zip }}" -d "$RUNNER_TEMP/ext"
+          npx --yes web-ext@8 lint --source-dir "$RUNNER_TEMP/ext" --warnings-as-errors
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: e2e-screenshot
-          path: dist/e2e.png
+          path: dist/e2e*.png
           if-no-files-found: ignore
 
       - uses: actions/upload-artifact@v4

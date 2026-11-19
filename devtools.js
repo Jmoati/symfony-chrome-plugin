@@ -33,6 +33,17 @@ function findHeader(headers, name) {
   return h ? h.value : null;
 }
 
+// Firefox's HAR has no _resourceType. fetch and XHR send Sec-Fetch-Dest: empty; where Firefox
+// omits Sec-Fetch-* (plain http on a non-localhost host), a JSON or XML response counts as an API call.
+// ponytail: mime heuristic, misses an API answering text/html over plain http.
+function resourceType(har) {
+  if (har._resourceType) return har._resourceType;
+  const dest = findHeader(har.request.headers, 'sec-fetch-dest');
+  if (dest) return dest === 'empty' ? 'fetch' : dest;
+  if (findHeader(har.request.headers, 'x-requested-with')) return 'xhr';
+  return /json|xml/.test(har.response.content.mimeType || '') ? 'fetch' : 'other';
+}
+
 function profilerUrl(har) {
   const headers = har.response.headers;
   const link = findHeader(headers, 'x-debug-token-link');
@@ -45,7 +56,7 @@ function profilerUrl(har) {
 chrome.devtools.network.onRequestFinished.addListener(har => {
   const entry = {
     id: ++seq,
-    type: har._resourceType || 'other',
+    type: resourceType(har),
     method: har.request.method,
     url: har.request.url,
     status: har.response.status,
@@ -82,7 +93,7 @@ chrome.devtools.network.onNavigated.addListener(() => {
   if (!store.preserveLog) store.clear();
 });
 
-chrome.devtools.panels.create('Symfony', '', 'panel.html', panel => {
+chrome.devtools.panels.create('Symfony', 'icons/icon-32.png', 'panel.html', panel => {
   panel.onShown.addListener(win => {
     if (win.__symfonyDebugAttached) return;
     win.__symfonyDebugAttached = true;

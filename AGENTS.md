@@ -33,6 +33,10 @@ the JSON response and opens the Symfony profiler through the `X-Debug-Token-Link
   `<script>` tag. Every script goes through a `src` attribute.
 - **No `innerHTML` with request data.** URLs and responses come from the network. Build the DOM
   with the `h()` function of `panel.js`, which goes through `textContent`.
+- **Chrome and Firefox from one folder.** Keep `chrome.*`: Firefox aliases it, and passes the panel
+  window to `onShown` too. Firefox's HAR has no `_resourceType`, so `resourceType()` in
+  `devtools.js` guesses it from `Sec-Fetch-Dest`. Chrome ignores `browser_specific_settings` in the
+  manifest; Firefox needs it. Check Firefox with `npx web-ext lint -s <unzipped folder>`.
 - **No `chrome.tabs`.** DevTools pages have no access to it. Open a tab with a `target="_blank"`
   link or `window.open`.
 - **No `navigator.clipboard`.** Chrome often blocks it in DevTools. Use `copyText()`.
@@ -49,9 +53,12 @@ the JSON response and opens the Symfony profiler through the `X-Debug-Token-Link
    number of profiler links. Open the screenshots to check the layout.
 3. Run `scripts/e2e.sh`. It loads the extension into Chrome for Testing with DevTools open, and
    checks `devtools.js`, the `chrome.devtools` API, the **Symfony** tab and the profiler links
-   against `tests/e2e/server.mjs`. It saves a screenshot to `dist/e2e.png`.
+   against `tests/e2e/server.mjs`. It saves a screenshot to `dist/e2e.png`. Then run
+   `scripts/e2e-firefox.sh`: the same checks in Firefox over Marionette (`tests/e2e/firefox.mjs`),
+   screenshot in `dist/e2e-firefox.png`. Firefox runs the panel in the extension process, so the
+   test reads its DOM through a frame script.
 4. If you add a case to the interface, add a matching request to `tests/mock-store.js` and a check
-   to `tests/e2e/run.mjs`.
+   to `tests/e2e/run.mjs` and `tests/e2e/firefox.mjs`.
 5. If you change the interface, `icons/icon.svg` or `store/promo.html`, run
    `scripts/store-assets.sh` and commit the regenerated icons and store images. The store
    screenshots come from `tests/mock-store.js`: its last request is the selected one.
@@ -62,7 +69,8 @@ the JSON response and opens the Symfony profiler through the `X-Debug-Token-Link
 `scripts/e2e.sh` needs Node.js 22+ and Chrome for Testing, because Google Chrome ignores
 `--load-extension` since version 137. If it is missing, install it with
 `npx @puppeteer/browsers@3.2.3 install chrome@stable --path ~/.cache/puppeteer`, or set its binary
-in `E2E_CHROME`.
+in `E2E_CHROME`. `scripts/e2e-firefox.sh` needs Firefox: `npx @puppeteer/browsers@3.2.3 install
+firefox@stable --path ~/.cache/puppeteer`, or its binary in `E2E_FIREFOX`.
 
 Neither test replaces the user's own Chrome. After a change to `devtools.js`, tell the user to
 reload the extension in `chrome://extensions`, then close and reopen DevTools.
@@ -72,8 +80,8 @@ reload the extension in `chrome://extensions`, then close and reopen DevTools.
 1. Bump `version` in `manifest.json` and in the version badge of `README.md`.
 2. Create a `v<version>` tag, for example `v1.1.0`, and push it.
 
-The CI, defined in `.github/workflows/ci.yml`, runs the checks, builds the zip and runs the
-end-to-end test on that zip, on every push to `master` and every pull request. On a tag, it also
+The CI, defined in `.github/workflows/ci.yml`, runs the checks, builds the zip, runs the
+end-to-end tests in Chrome and Firefox and the addons.mozilla.org lint on that zip, on every push to `master` and every pull request. On a tag, it also
 checks that the tag matches the manifest version, then creates a GitHub release with the zip. The
 installation steps at the top of the release come from `.github/release-notes.md`.
 
