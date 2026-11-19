@@ -28,7 +28,7 @@ the store does not accept Google's or Symfony's trademarks as a product name.
 Requirements
 ------------
 
-- Google Chrome, or any Chromium browser that accepts Manifest V3 extensions.
+- Google Chrome or any Chromium browser that accepts Manifest V3 extensions, or Firefox 140 or later.
 - A Symfony API with the profiler enabled, which sends the `X-Debug-Token-Link` or `X-Debug-Token`
   header.
 
@@ -55,6 +55,18 @@ on a given version:
 
 To update, replace the folder's contents with the new release, then click the extension's reload icon
 in `chrome://extensions`. Install it one way only: with both, DevTools shows two **Symfony** tabs.
+
+### In Firefox
+
+The same zip works in Firefox:
+
+1. Open `about:debugging#/runtime/this-firefox`.
+2. Click **Load Temporary Add-on…** and pick `manifest.json` in the unzipped folder.
+3. Open DevTools on your application, then the **Symfony** tab.
+
+Firefox forgets a temporary add-on when it quits. A permanent install needs the zip signed on
+[addons.mozilla.org](https://addons.mozilla.org/developers/), listed or unlisted, or with
+`web-ext sign`.
 
 ### From the source
 
@@ -85,7 +97,10 @@ Usage
 
 ### Limitations
 
-- Chrome only records requests while DevTools is open.
+- The browser only records requests while DevTools is open.
+- Firefox's HAR has no resource type. There, a request counts as XHR/fetch when it sends
+  `Sec-Fetch-Dest: empty` or `X-Requested-With`. Firefox omits `Sec-Fetch-*` over plain http on a
+  host other than `localhost`: there, a JSON or XML response counts as an API call.
 - Detecting a custom performance panel only works on `localhost` and `*.localhost`, the hosts declared in `host_permissions`. Elsewhere, **Performance** opens the `time` panel.
 - The link comes from the `X-Debug-Token-Link` header. Without it, the panel builds `/_profiler/{X-Debug-Token}` on the request's host.
 - The panel keeps the last 500 requests.
@@ -93,7 +108,7 @@ Usage
 Development
 -----------
 
-The extension has no dependency and no build step: Chrome loads the folder as it is.
+The extension has no dependency and no build step: Chrome and Firefox load the folder as it is.
 
 | File | Role |
 |---|---|
@@ -112,6 +127,7 @@ scripts/check.sh          # JavaScript syntax, manifest, no inline script in HTM
 scripts/render.sh dark    # screenshot of the interface in dist/, dark theme (Google Chrome)
 scripts/render.sh light   # same, light theme
 scripts/e2e.sh            # end-to-end test in a real DevTools (Chrome for Testing)
+scripts/e2e-firefox.sh    # the same in Firefox, over Marionette
 scripts/package.sh        # dist/symfony-chrome-plugin-<version>.zip
 scripts/store-assets.sh   # icons and Chrome Web Store images, from their sources (Google Chrome)
 ```
@@ -154,8 +170,8 @@ Contributions follow [CONTRIBUTING.md](.github/CONTRIBUTING.md), security report
 1. Bump `version` in `manifest.json` and in the version badge at the top of this README.
 2. Create a `v<version>` tag, for example `v1.1.0`, and push it.
 
-On every push to `master` and every pull request, the CI runs the checks, builds the zip and runs
-the end-to-end test on that zip. On a tag, it also checks that the tag matches the manifest
+On every push to `master` and every pull request, the CI runs the checks, builds the zip, runs
+the end-to-end tests in Chrome and Firefox and the addons.mozilla.org lint on that zip. On a tag, it also checks that the tag matches the manifest
 version, publishes a GitHub release with the zip and the installation steps from
 `.github/release-notes.md`, then submits the zip to the Chrome Web Store. The store publishes it once
 Google has reviewed it, and refuses a version that is not higher than the published one.
@@ -177,5 +193,5 @@ This plugin is open-sourced software licensed under the [MIT license](LICENSE).
 
 Designed and written by **Luis Rosas**. Published by [jul6art](https://devinthehood.com).
 
-Symfony is a trademark of Symfony SAS, and Chrome a trademark of Google LLC. This project is not
+Symfony is a trademark of Symfony SAS, Chrome a trademark of Google LLC, and Firefox a trademark of the Mozilla Foundation. This project is not
 affiliated with or endorsed by either.
